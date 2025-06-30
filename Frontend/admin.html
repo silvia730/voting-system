@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Voting System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="admin-login-section">
+        <h2>Admin Login</h2>
+        <form id="admin-login-form">
+            <input type="text" id="admin-username" placeholder="Username" required><br>
+            <input type="password" id="admin-password" placeholder="Password" required><br>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+    <div id="admin-dashboard" style="display:none;">
+        <h2>Admin Dashboard</h2>
+        <nav>
+            <button onclick="showTab('users')">Users</button>
+            <button onclick="showTab('positions')">Positions</button>
+            <button onclick="showTab('results')">Results</button>
+            <button onclick="adminLogout()">Logout</button>
+        </nav>
+        <div id="admin-users-tab" class="admin-tab" style="display:none;">
+            <h3>Users</h3>
+            <div id="admin-users-list"></div>
+        </div>
+        <div id="admin-positions-tab" class="admin-tab" style="display:none;">
+            <h3>Positions & Candidates</h3>
+            <div id="admin-positions-list"></div>
+        </div>
+        <div id="admin-results-tab" class="admin-tab" style="display:none;">
+            <h3>Results</h3>
+            <div id="admin-results-list"></div>
+        </div>
+    </div>
+    <script src="admin.js"></script>
+</body>
+</html> 

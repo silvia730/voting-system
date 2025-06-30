@@ -1,0 +1,183 @@
+body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#login-section,
+#signup-section,
+#forgot-password-section,
+#voting-section,
+#results-section {
+    background: #fff;
+    color: #222;
+    border-radius: 16px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.12);
+    padding: 2.5rem 2rem 2rem 2rem;
+    min-width: 340px;
+    max-width: 380px;
+    width: 100%;
+    margin: 2rem auto;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+#login-section[style*="block"],
+#signup-section[style*="block"],
+#forgot-password-section[style*="block"],
+#voting-section[style*="block"],
+#results-section[style*="block"] {
+    display: flex !important;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="tel"],
+select {
+    padding: 0.75rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1.08rem;
+    background: #f9f9f9;
+    color: #222;
+    outline: none;
+    transition: border 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus,
+input[type="tel"]:focus,
+select:focus {
+    border: 1.5px solid #2575fc;
+}
+
+button {
+    padding: 0.75rem 1rem;
+    background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(80,80,200,0.08);
+    transition: background 0.2s, transform 0.1s;
+}
+button:hover {
+    background: linear-gradient(90deg, #2575fc 0%, #6a11cb 100%);
+    transform: translateY(-2px) scale(1.03);
+}
+
+a {
+    color: #2575fc;
+    text-decoration: none;
+    font-weight: 500;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+#positions-container > div {
+    margin-bottom: 1.2rem;
+    padding: 1rem;
+    background: #f5f7fa;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+#results-container > div {
+    margin-bottom: 1.2rem;
+    padding: 1rem;
+    background: #f5f7fa;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+#vote-message {
+    color: #e74c3c;
+    font-weight: 500;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+@media (max-width: 500px) {
+    #login-section, #signup-section, #voting-section, #results-section {
+        min-width: 90vw;
+        max-width: 98vw;
+        padding: 1.2rem 0.5rem;
+    }
+    body {
+        padding: 0;
+    }
+}
+
+/* Voting page candidate cards */
+#positions-container > div > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    background: #f8fafd;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(80,80,200,0.08);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.2rem;
+}
+.candidate-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 0.7rem 1rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+.candidate-card:hover {
+    box-shadow: 0 4px 16px rgba(80,80,200,0.13);
+    border: 2px solid #2575fc;
+    transform: translateY(-2px) scale(1.03);
+}
+.candidate-img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #2575fc;
+    background: #e6e6e6;
+}
+.candidate-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #222;
+}
+input[type="radio"] {
+    accent-color: #2575fc;
+    margin-right: 0.7rem;
+}
