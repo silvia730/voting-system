@@ -3,6 +3,7 @@ from flask_cors import CORS
 import mysql.connector
 from dotenv import load_dotenv
 import os
+from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -10,12 +11,16 @@ app = Flask(__name__)
 CORS(app)
 
 # MySQL config (load from .env)
+database_url = os.getenv('DATABASE_URL')
+parsed_url = urlparse(database_url)
+
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', 3306)),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
+    'host': parsed_url.hostname,
+    'user': parsed_url.username,
+    'password': parsed_url.password,
+    'port': parsed_url.port or 3306,
 }
+
 DB_NAME = os.getenv('DB_NAME', 'voting_system')
 
 def get_db():
