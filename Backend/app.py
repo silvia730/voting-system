@@ -21,7 +21,8 @@ DB_CONFIG = {
     'port': parsed_url.port or 3306,
 }
 
-DB_NAME = os.getenv('DB_NAME', 'voting_system')
+
+DB_NAME = parsed_url.path.lstrip('/') 
 
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
