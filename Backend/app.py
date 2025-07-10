@@ -1,24 +1,29 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# MySQL config (update with your credentials)
+# MySQL config (load from .env)
 DB_CONFIG = {
-    'host': 'localhost',
-    'port': 3306,
-    'user': 'root',
-    'password': '#07silvia,njeri'
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'port': int(os.getenv('DB_PORT', 3306)),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
 }
+DB_NAME = os.getenv('DB_NAME', 'voting_system')
 
 def get_db():
     return mysql.connector.connect(**DB_CONFIG)
 
 def get_db_with_database():
     config_with_db = DB_CONFIG.copy()
-    config_with_db['database'] = 'voting_system'
+    config_with_db['database'] = DB_NAME
     return mysql.connector.connect(**config_with_db)
 
 def initialize_db():
@@ -66,7 +71,7 @@ def initialize_db():
         UNIQUE KEY unique_vote (user_id, position_id)
     );
     """
-    
+   
     for statement in schema.split(';'):
         if statement.strip():
             cursor.execute(statement)
@@ -217,6 +222,57 @@ def get_positions():
     cursor.close()
     db.close()
     return jsonify({'positions': positions})
+
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    name = data.get('name') or email.split('@')[0]
+    if not email or not password:
+        return jsonify({'success': False, 'message': 'Email and password are required.'}), 400
+    db = get_db_with_database()
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute('SELECT * FROM users WHERE email=%s', (email,))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'message': 'Email already exists.'}), 409
+        cursor.execute('INSERT INTO users (name, email, password, has_voted) VALUES (%s, %s, %s, 0)', (name, email, password))
+        db.commit()
+        cursor.execute('SELECT * FROM users WHERE email=%s', (email,))
+        user = cursor.fetchone()
+        return jsonify({'success': True, 'user': user})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    db = get_db_with_database()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM users')
+    users = cursor.fetchall()
+    cursor.close()
+    db.close()
+    return jsonify({'users': users})
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    db = get_db_with_database()
+    cursor = db.cursor()
+    try:
+        cursor.execute('DELETE FROM users WHERE id=%s', (user_id,))
+        db.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
 
 if __name__ == '__main__':
     initialize_db()
