@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "https://voting-systemfronted.onrender.com"}})
 
 # Load DATABASE_URL from .env and parse it
 database_url = os.getenv('DATABASE_URL')
