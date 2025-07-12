@@ -86,27 +86,44 @@ adminLoginForm.addEventListener('submit', function(e) {
     }
 });
 
-// Render users
-function renderAdminUsers() {
+// Render users (refactored to fetch from backend)
+async function renderAdminUsers() {
     const usersList = document.getElementById('admin-users-list');
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.length === 0) {
-        usersList.innerHTML = '<p>No users found.</p>';
-        return;
+    usersList.innerHTML = '<p>Loading...</p>';
+    try {
+        const response = await fetch('http://localhost:5000/api/users');
+        const data = await response.json();
+        const users = data.users || [];
+        if (users.length === 0) {
+            usersList.innerHTML = '<p>No users found.</p>';
+            return;
+        }
+        usersList.innerHTML = '<ul>' + users.map(u => `
+            <li>${u.email} (${u.has_voted ? 'Voted' : 'Not Voted'})
+                <button onclick="deleteUser(${u.id})" style="margin-left:1rem;color:#fff;background:#e74c3c;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;">Delete</button>
+            </li>`).join('') + '</ul>';
+    } catch (err) {
+        usersList.innerHTML = '<p>Error loading users.</p>';
     }
-    usersList.innerHTML = '<ul>' + users.map((u, idx) => `
-        <li>${u.email} (${u.hasVoted ? 'Voted' : 'Not Voted'})
-            <button onclick="deleteUser(${idx})" style="margin-left:1rem;color:#fff;background:#e74c3c;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;">Delete</button>
-        </li>`).join('') + '</ul>';
 }
 
-// Delete user logic
-window.deleteUser = function(idx) {
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users.splice(idx, 1);
-    localStorage.setItem('users', JSON.stringify(users));
-    renderAdminUsers();
-};
+// Delete user logic (refactored to use backend API)
+window.deleteUser = async function(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    try {
+        const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Failed to delete user.');
+            return;
+        }
+        renderAdminUsers();
+    } catch (err) {
+        alert('Error connecting to server.');
+    }
+}
 
 // Render positions and candidates
 function renderAdminPositions() {
@@ -187,19 +204,29 @@ document.getElementById('admin-users-tab').innerHTML += `
     <div id="admin-add-user-message" style="color:#e74c3c;"></div>
 `;
 
-// Add User Logic
-document.getElementById('admin-add-user-form').addEventListener('submit', function(e) {
+// Add User Logic (refactored to use backend API)
+document.getElementById('admin-add-user-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const email = document.getElementById('admin-add-user-email').value.trim();
     const password = document.getElementById('admin-add-user-password').value;
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.find(u => u.email === email)) {
-        document.getElementById('admin-add-user-message').textContent = 'Email already exists!';
-        return;
+    const messageDiv = document.getElementById('admin-add-user-message');
+    messageDiv.textContent = '';
+    try {
+        const response = await fetch('http://localhost:5000/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            messageDiv.textContent = data.message || 'Failed to add user.';
+            return;
+        }
+        messageDiv.style.color = '#27ae60';
+        messageDiv.textContent = 'User added!';
+        renderAdminUsers(); // Optionally, refresh user list from backend
+        this.reset();
+    } catch (err) {
+        messageDiv.textContent = 'Error connecting to server.';
     }
-    users.push({ email, password, hasVoted: false, votes: {} });
-    localStorage.setItem('users', JSON.stringify(users));
-    document.getElementById('admin-add-user-message').textContent = 'User added!';
-    renderAdminUsers();
-    this.reset();
 }); 
