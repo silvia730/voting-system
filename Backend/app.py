@@ -15,9 +15,9 @@ database_url = os.getenv('DATABASE_URL')
 parsed_url = urlparse(database_url)
 
 DB_CONFIG = {
-    'DB_HOST': parsed_url.hostname,
-    'DB_USER': parsed_url.username,
-    'DB_PASSWORD': parsed_url.password,
+    'host': parsed_url.hostname,
+    'user': parsed_url.username,
+    'password': parsed_url.password,
     'port': parsed_url.port or 3306,
 }
 
