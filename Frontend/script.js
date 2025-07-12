@@ -70,67 +70,52 @@ function showSection(section) {
     section.style.display = 'block';
 }
 
-// Helper: Get users from localStorage
-function getUsers() {
-    return JSON.parse(localStorage.getItem('users') || '[]');
-}
+// Store the current user in a JS variable for the session
+let currentUser = null;
 
-// Helper: Save users to localStorage
-function saveUsers(users) {
-    localStorage.setItem('users', JSON.stringify(users));
-}
-
-// Helper: Get current user from localStorage
-function getCurrentUser() {
-    return JSON.parse(localStorage.getItem('currentUser') || 'null');
-}
-
-// Helper: Set current user in localStorage
-function setCurrentUser(user) {
-    localStorage.setItem('currentUser', JSON.stringify(user));
-}
-
-// Helper: Remove current user
-function removeCurrentUser() {
-    localStorage.removeItem('currentUser');
-}
-
-// Login logic
-loginForm.addEventListener('submit', function(e) {
+// Login logic (refactored to use backend API)
+loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
-    let users = getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
-        alert('Invalid credentials.');
-        return;
+    try {
+        const response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Invalid credentials.');
+            return;
+        }
+        currentUser = data.user;
+        showVotingPage();
+    } catch (err) {
+        alert('Error connecting to server.');
     }
-    setCurrentUser(user);
-    showVotingPage();
 });
 
 // Logout
 logoutBtn.addEventListener('click', function() {
-    removeCurrentUser();
+    currentUser = null;
     showSection(loginSection);
 });
 
 // Back to login from results
 backToLogin.addEventListener('click', function() {
-    removeCurrentUser();
+    currentUser = null;
     showSection(loginSection);
 });
 
 // Show voting page
 function showVotingPage() {
-    const user = getCurrentUser();
-    if (!user) {
+    if (!currentUser) {
         showSection(loginSection);
         return;
     }
     // If user has already voted, show message and disable form
-    if (user.hasVoted) {
+    if (currentUser.hasVoted) {
         votingForm.style.display = 'none';
         voteMessage.textContent = 'You have already cast your vote. Please wait for results.';
     } else {
@@ -179,17 +164,20 @@ function renderPositions() {
     });
 }
 
-// Voting logic
-votingForm.addEventListener('submit', function(e) {
+// Voting logic (refactored to use backend API)
+votingForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const user = getCurrentUser();
-    if (!user) return;
+    if (!currentUser) return;
     let votes = {};
     let allVoted = true;
     positions.forEach(pos => {
         const selected = document.querySelector(`input[name='position-${pos.id}']:checked`);
         if (selected) {
-            votes[pos.id] = selected.value;
+            // Find candidate ID by name
+            const candidate = pos.candidates.find(c => c.name === selected.value);
+            if (candidate) {
+                votes[pos.id] = candidate.name; // We'll map to candidate ID below
+            }
         } else {
             allVoted = false;
         }
@@ -198,75 +186,86 @@ votingForm.addEventListener('submit', function(e) {
         alert('Please vote for all positions.');
         return;
     }
-    // Save vote to user
-    let users = getUsers();
-    let idx = users.findIndex(u => u.email === user.email);
-    users[idx].hasVoted = true;
-    users[idx].votes = votes;
-    saveUsers(users);
-    setCurrentUser(users[idx]);
-    voteMessage.textContent = 'You have already cast your vote. Please wait for results.';
-    votingForm.style.display = 'none';
-});
-
-// Simulate results (for demo: show results if all users have voted)
-function showResultsPage() {
-    // Tally votes
-    let users = getUsers();
-    let voteCounts = {};
+    // Map candidate names to IDs for backend
+    let votesById = {};
     positions.forEach(pos => {
-        voteCounts[pos.id] = {};
-        pos.candidates.forEach(candidate => {
-            voteCounts[pos.id][candidate.name] = 0;
-        });
-    });
-    users.forEach(user => {
-        if (user.hasVoted && user.votes) {
-            Object.entries(user.votes).forEach(([posId, candidateName]) => {
-                if (voteCounts[posId] && voteCounts[posId][candidateName] !== undefined) {
-                    voteCounts[posId][candidateName]++;
-                }
-            });
+        const selected = document.querySelector(`input[name='position-${pos.id}']:checked`);
+        if (selected) {
+            const candidate = pos.candidates.find(c => c.name === selected.value);
+            if (candidate) {
+                votesById[pos.id] = candidate.id || pos.candidates.indexOf(candidate) + 1; // fallback if no id
+            }
         }
     });
-    // Render results
-    resultsContainer.innerHTML = '';
-    positions.forEach(pos => {
-        const posDiv = document.createElement('div');
-        posDiv.innerHTML = `<strong>${pos.name}</strong><br>`;
-        let maxVotes = 0;
-        let winner = '';
-        pos.candidates.forEach(candidate => {
-            const count = voteCounts[pos.id][candidate.name];
-            posDiv.innerHTML += `${candidate.name}: ${count} votes<br>`;
-            if (count > maxVotes) {
-                maxVotes = count;
-                winner = candidate.name;
-            }
+    try {
+        const response = await fetch('http://localhost:5000/api/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: currentUser.id, votes: votesById })
         });
-        posDiv.innerHTML += `<em>Winner: ${winner || 'No votes yet'}</em><br><br>`;
-        resultsContainer.appendChild(posDiv);
-    });
-    showSection(resultsSection);
-}
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Failed to submit vote.');
+            return;
+        }
+        currentUser.hasVoted = true;
+        voteMessage.textContent = 'You have already cast your vote. Please wait for results.';
+        votingForm.style.display = 'none';
+    } catch (err) {
+        alert('Error submitting vote to server.');
+    }
+});
 
-// For demo: show results if all users have voted
-function checkIfAllVoted() {
-    let users = getUsers();
-    if (users.length > 0 && users.every(u => u.hasVoted)) {
-        showResultsPage();
+// Refactored: Show results by fetching from backend
+async function showResultsPage() {
+    try {
+        const response = await fetch('http://localhost:5000/api/results');
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+            resultsContainer.innerHTML = '<em>No results available.</em>';
+            showSection(resultsSection);
+            return;
+        }
+        resultsContainer.innerHTML = '';
+        // Group results by position
+        const grouped = {};
+        data.forEach(row => {
+            if (!grouped[row.position_id]) {
+                grouped[row.position_id] = {
+                    position_name: row.position_name,
+                    candidates: []
+                };
+            }
+            grouped[row.position_id].candidates.push({
+                candidate_name: row.candidate_name,
+                votes: row.votes
+            });
+        });
+        Object.values(grouped).forEach(pos => {
+            const posDiv = document.createElement('div');
+            posDiv.innerHTML = `<strong>${pos.position_name}</strong><br>`;
+            let maxVotes = 0;
+            let winner = '';
+            pos.candidates.forEach(candidate => {
+                posDiv.innerHTML += `${candidate.candidate_name}: ${candidate.votes} votes<br>`;
+                if (candidate.votes > maxVotes) {
+                    maxVotes = candidate.votes;
+                    winner = candidate.candidate_name;
+                }
+            });
+            posDiv.innerHTML += `<em>Winner: ${winner || 'No votes yet'}</em><br><br>`;
+            resultsContainer.appendChild(posDiv);
+        });
+        showSection(resultsSection);
+    } catch (err) {
+        resultsContainer.innerHTML = '<em>Error fetching results from server.</em>';
+        showSection(resultsSection);
     }
 }
 
-// For now, check after every vote
-votingForm.addEventListener('submit', function() {
-    setTimeout(checkIfAllVoted, 500);
-});
-
-// On page load, show login or voting if already logged in
+// On page load, show login or voting if already logged in (session only)
 window.onload = function() {
-    const user = getCurrentUser();
-    if (user) {
+    if (currentUser) {
         showVotingPage();
     } else {
         showSection(loginSection);
@@ -291,7 +290,7 @@ backToLoginFromForgot.addEventListener('click', function(e) {
 forgotPasswordForm.addEventListener('submit', function(e) {
     e.preventDefault();
     const email = document.getElementById('forgot-email').value.trim();
-    let users = getUsers();
+    let users = getUsers(); // This function is no longer available
     const user = users.find(u => u.email === email);
     if (!user) {
         alert('No account found with that email.');
