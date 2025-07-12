@@ -111,7 +111,7 @@ async function renderAdminUsers() {
 window.deleteUser = async function(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-        const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
+        const response = await fetch(`https://voting-system-backend-cewd.onrender.com/api/users/${userId}`, {
             method: 'DELETE'
         });
         const data = await response.json();
