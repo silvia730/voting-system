@@ -17,7 +17,7 @@ DB_CONFIG = {
     'user': os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
 }
-DB_NAME = os.getenv('DB_NAME', 'voting_system')
+DB_NAME = os.getenv('DB_NAME', '/')
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
