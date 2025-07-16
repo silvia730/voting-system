@@ -1,48 +1,26 @@
 // Categories and positions with candidate images
-const categories = [
-    { id: 'students', name: 'Students' },
-    { id: 'teachers', name: 'Teachers' },
-    { id: 'staff', name: 'Staff' }
-];
+let categories = [];
+let positions = [];
 
-const positions = [
-    {
-        id: 1,
-        name: 'President',
-        candidates: [
-            { name: 'Alice', image: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Bob', image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'students'
-    },
-    {
-        id: 2,
-        name: 'Secretary',
-        candidates: [
-            { name: 'Carol', image: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Dave', image: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'students'
-    },
-    {
-        id: 3,
-        name: 'Head Teacher',
-        candidates: [
-            { name: 'Ms. Johnson', image: 'https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Mr. Smith', image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'teachers'
-    },
-    {
-        id: 4,
-        name: 'Staff Rep',
-        candidates: [
-            { name: 'Ms. Green', image: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Mr. Brown', image: 'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'staff'
-    }
-];
+// Fetch positions and categories from backend
+async function fetchPositionsAndCategories() {
+    const res = await fetch('http://localhost:5000/api/positions');
+    const data = await res.json();
+    positions = data.positions || [];
+    // Extract unique categories from positions
+    const catMap = {};
+    positions.forEach(pos => {
+        if (pos.category && !catMap[pos.category]) {
+            catMap[pos.category] = { id: pos.category, name: capitalize(pos.category) };
+        }
+    });
+    categories = Object.values(catMap);
+}
+
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 // Section elements
 const loginSection = document.getElementById('login-section');
@@ -79,7 +57,7 @@ loginForm.addEventListener('submit', async function(e) {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/login', {
+        const response = await fetch('http://localhost:5000/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -90,7 +68,7 @@ loginForm.addEventListener('submit', async function(e) {
             return;
         }
         currentUser = data.user;
-        showVotingPage();
+        await showVotingPage(); // Wait for positions to be fetched
     } catch (err) {
         alert('Error connecting to server.');
     }
@@ -108,12 +86,13 @@ backToLogin.addEventListener('click', function() {
     showSection(loginSection);
 });
 
-// Show voting page
-function showVotingPage() {
+// Show voting page (fetch live data)
+async function showVotingPage() {
     if (!currentUser) {
         showSection(loginSection);
         return;
     }
+    await fetchPositionsAndCategories();
     // If user has already voted, show message and disable form
     if (currentUser.hasVoted) {
         votingForm.style.display = 'none';
@@ -126,7 +105,7 @@ function showVotingPage() {
     showSection(votingSection);
 }
 
-// Render positions and candidates, grouped by category
+// Render positions and candidates, grouped by category (from live data)
 function renderPositions() {
     positionsContainer.innerHTML = '';
     categories.forEach(cat => {
@@ -137,16 +116,16 @@ function renderPositions() {
             catPositions.forEach(pos => {
                 const posDiv = document.createElement('div');
                 posDiv.innerHTML = `<strong>${pos.name}</strong><br>`;
-                pos.candidates.forEach(candidate => {
+                (pos.candidates || []).forEach(candidate => {
                     const card = document.createElement('div');
                     card.className = 'candidate-card';
                     const radio = document.createElement('input');
                     radio.type = 'radio';
                     radio.name = `position-${pos.id}`;
-                    radio.value = candidate.name;
+                    radio.value = candidate.id;
                     radio.style.marginRight = '0.5rem';
                     const img = document.createElement('img');
-                    img.src = candidate.image || 'images/placeholder.jpg';
+                    img.src = candidate.image && candidate.image.trim() ? candidate.image : 'images/placeholder.jpg';
                     img.alt = candidate.name;
                     img.className = 'candidate-img';
                     const nameSpan = document.createElement('span');
@@ -168,16 +147,12 @@ function renderPositions() {
 votingForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!currentUser) return;
-    let votes = {};
+    let votesById = {};
     let allVoted = true;
     positions.forEach(pos => {
         const selected = document.querySelector(`input[name='position-${pos.id}']:checked`);
         if (selected) {
-            // Find candidate ID by name
-            const candidate = pos.candidates.find(c => c.name === selected.value);
-            if (candidate) {
-                votes[pos.id] = candidate.name; // We'll map to candidate ID below
-            }
+            votesById[pos.id] = parseInt(selected.value);
         } else {
             allVoted = false;
         }
@@ -186,19 +161,8 @@ votingForm.addEventListener('submit', async function(e) {
         alert('Please vote for all positions.');
         return;
     }
-    // Map candidate names to IDs for backend
-    let votesById = {};
-    positions.forEach(pos => {
-        const selected = document.querySelector(`input[name='position-${pos.id}']:checked`);
-        if (selected) {
-            const candidate = pos.candidates.find(c => c.name === selected.value);
-            if (candidate) {
-                votesById[pos.id] = candidate.id || pos.candidates.indexOf(candidate) + 1; // fallback if no id
-            }
-        }
-    });
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/vote', {
+        const response = await fetch('http://localhost:5000/api/vote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: currentUser.id, votes: votesById })
@@ -211,6 +175,9 @@ votingForm.addEventListener('submit', async function(e) {
         currentUser.hasVoted = true;
         voteMessage.textContent = 'You have already cast your vote. Please wait for results.';
         votingForm.style.display = 'none';
+        // Optionally, notify admin dashboard to refresh users/results (if open)
+        if (window.parent && window.parent.renderAdminUsers) window.parent.renderAdminUsers();
+        if (window.parent && window.parent.renderAdminResults) window.parent.renderAdminResults();
     } catch (err) {
         alert('Error submitting vote to server.');
     }
@@ -219,7 +186,7 @@ votingForm.addEventListener('submit', async function(e) {
 // Refactored: Show results by fetching from backend
 async function showResultsPage() {
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/results');
+        const response = await fetch('http://localhost:5000/api/results');
         const data = await response.json();
         if (!Array.isArray(data)) {
             resultsContainer.innerHTML = '<em>No results available.</em>';
