@@ -9,44 +9,24 @@ const categories = [
     { id: 'staff', name: 'Staff' }
 ];
 
-const positions = [
-    {
-        id: 1,
-        name: 'President',
-        candidates: [
-            { name: 'Alice', image: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Bob', image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'students'
-    },
-    {
-        id: 2,
-        name: 'Secretary',
-        candidates: [
-            { name: 'Carol', image: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Dave', image: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'students'
-    },
-    {
-        id: 3,
-        name: 'Head Teacher',
-        candidates: [
-            { name: 'Ms. Johnson', image: 'https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Mr. Smith', image: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'teachers'
-    },
-    {
-        id: 4,
-        name: 'Staff Rep',
-        candidates: [
-            { name: 'Ms. Green', image: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&w=256&h=256&fit=crop' },
-            { name: 'Mr. Brown', image: 'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=facearea&w=256&h=256&facepad=2' }
-        ],
-        category: 'staff'
-    }
-];
+// Remove hardcoded positions and candidates
+// Fetch positions and candidates from backend
+let positions = [];
+let candidates = [];
+
+async function fetchPositionsAndCandidates() {
+    // Fetch positions (with candidates included)
+    const res = await fetch('http://localhost:5000/api/positions');
+    const data = await res.json();
+    positions = data.positions || [];
+    // Flatten all candidates for easy lookup
+    candidates = [];
+    positions.forEach(pos => {
+        (pos.candidates || []).forEach(c => {
+            candidates.push({ ...c, position_name: pos.name, position_category: pos.category });
+        });
+    });
+}
 
 const adminLoginSection = document.getElementById('admin-login-section');
 const adminDashboard = document.getElementById('admin-dashboard');
@@ -91,7 +71,7 @@ async function renderAdminUsers() {
     const usersList = document.getElementById('admin-users-list');
     usersList.innerHTML = '<p>Loading...</p>';
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/users');
+        const response = await fetch('http://localhost:5000/api/users');
         const data = await response.json();
         const users = data.users || [];
         if (users.length === 0) {
@@ -111,7 +91,7 @@ async function renderAdminUsers() {
 window.deleteUser = async function(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-        const response = await fetch(`https://voting-system-backend-cewd.onrender.com/api/users/${userId}`, {
+        const response = await fetch(`http://localhost:5000/api/users/${userId}`, {
             method: 'DELETE'
         });
         const data = await response.json();
@@ -125,65 +105,205 @@ window.deleteUser = async function(userId) {
     }
 }
 
-// Render positions and candidates
-function renderAdminPositions() {
+// Helper: show toast message
+function showToast(message, type = 'success') {
+    let toast = document.createElement('div');
+    toast.className = `admin-toast admin-toast-${type}`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 2500);
+}
+
+// Helper: get initials from name
+function getInitials(name) {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Render positions and candidates with card layout, edit/add/delete features
+async function renderAdminPositions() {
+    await fetchPositionsAndCandidates();
     const positionsList = document.getElementById('admin-positions-list');
     if (positions.length === 0) {
         positionsList.innerHTML = '<p>No positions found.</p>';
         return;
     }
     positionsList.innerHTML = positions.map(pos => `
-        <div style="margin-bottom:1.5rem;">
-            <strong>${pos.name}</strong> (${pos.category})<br>
-            <ul>
-                ${pos.candidates.map(c => `<li><img src='${c.image}' alt='${c.name}' style='width:30px;height:30px;border-radius:50%;vertical-align:middle;margin-right:8px;'>${c.name}</li>`).join('')}
-            </ul>
+        <div class="admin-position-card">
+            <div class="admin-position-header">
+                <span class="admin-position-title">${pos.name}</span>
+                <span class="admin-position-category">(${pos.category})</span>
+            </div>
+            <div class="admin-candidates-list">
+                ${pos.candidates.map(c => `
+                    <div class="admin-candidate-card" id="candidate-card-${c.id}">
+                        ${c.image && c.image.trim() ?
+                            `<img src='${c.image}' alt='${c.name}' class="admin-candidate-img" id="candidate-img-${c.id}" style="cursor:pointer;" onclick="triggerImageUpload(${c.id})">`
+                            :
+                            `<div class="admin-candidate-avatar" id="candidate-img-${c.id}" style="cursor:pointer;" onclick="triggerImageUpload(${c.id})">${getInitials(c.name)}</div>`
+                        }
+                        <input type='file' accept='image/*' id='candidate-img-input-${c.id}' style='display:none' onchange="changeCandidateImage(${c.id})">
+                        <span class="admin-candidate-name" id="candidate-name-${c.id}">${c.name}</span>
+                        <button class="admin-edit-btn" onclick="editCandidate(${c.id})">Edit</button>
+                        <button class="admin-delete-btn" onclick="deleteCandidate(${c.id})">Delete</button>
+                        <form class="admin-edit-form" id="edit-form-${c.id}" style="display:none;" onsubmit="return saveCandidateEdit(${c.id})">
+                            <input type='text' value='${c.name}' id='edit-candidate-name-${c.id}' required oninput="liveUpdateAvatar(${c.id})">
+                            <select id='edit-candidate-position-${c.id}'>
+                                ${positions.map(p => `<option value='${p.id}' ${p.id === c.position_id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                            </select>
+                            <button type='submit'>Save</button>
+                            <button type='button' onclick="cancelEditCandidate(${c.id})">Cancel</button>
+                            <button type='button' class='admin-remove-img-btn' onclick="removeCandidateImage(${c.id})">Remove Image</button>
+                        </form>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="admin-add-candidate-btn" onclick="showAddCandidateForm(${pos.id})">+ Add Candidate</button>
+            <form class="admin-add-candidate-form" id="add-candidate-form-${pos.id}" style="display:none;" onsubmit="return addCandidate(${pos.id})">
+                <input type='text' id='add-candidate-name-${pos.id}' placeholder='Candidate Name' required>
+                <input type='file' accept='image/*' id='add-candidate-image-${pos.id}'>
+                <button type='submit'>Add</button>
+                <button type='button' onclick="cancelAddCandidate(${pos.id})">Cancel</button>
+            </form>
         </div>
     `).join('');
 }
 
-// Render results (always show current leader)
-function renderAdminResults() {
+// Edit candidate: show form
+window.editCandidate = function(candidateId) {
+    document.getElementById(`edit-form-${candidateId}`).style.display = 'flex';
+    document.getElementById(`candidate-name-${candidateId}`).style.display = 'none';
+};
+window.cancelEditCandidate = function(candidateId) {
+    document.getElementById(`edit-form-${candidateId}`).style.display = 'none';
+    document.getElementById(`candidate-name-${candidateId}`).style.display = 'inline';
+};
+
+// Trigger file input when image is clicked
+window.triggerImageUpload = function(candidateId) {
+    document.getElementById(`candidate-img-input-${candidateId}`).click();
+};
+
+// Change candidate image instantly (works for both img and initials avatar)
+window.changeCandidateImage = async function(candidateId) {
+    const input = document.getElementById(`candidate-img-input-${candidateId}`);
+    if (input.files && input.files[0]) {
+        const formData = new FormData();
+        formData.append('image', input.files[0]);
+        let imgRes = await fetch(`http://localhost:5000/api/candidates/${candidateId}/image`, {
+            method: 'POST',
+            body: formData
+        });
+        if (imgRes.ok) {
+            const data = await imgRes.json();
+            // Replace avatar with image
+            const imgElem = document.getElementById(`candidate-img-${candidateId}`);
+            if (imgElem.tagName === 'IMG') {
+                imgElem.src = data.image;
+            } else {
+                // Replace initials div with img
+                imgElem.outerHTML = `<img src='${data.image}' alt='' class='admin-candidate-img' id='candidate-img-${candidateId}' style='cursor:pointer;' onclick='triggerImageUpload(${candidateId})'>`;
+            }
+            showToast('Image updated!');
+        } else {
+            showToast('Image upload failed', 'error');
+        }
+    }
+};
+
+// Save candidate edits (name, position)
+window.saveCandidateEdit = async function(candidateId) {
+    event.preventDefault();
+    const name = document.getElementById(`edit-candidate-name-${candidateId}`).value;
+    const position_id = document.getElementById(`edit-candidate-position-${candidateId}`).value;
+    // Update name and position
+    let res = await fetch(`http://localhost:5000/api/candidates/${candidateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, position_id })
+    });
+    if (!res.ok) { showToast('Failed to update candidate', 'error'); return false; }
+    showToast('Candidate updated!');
+    // Re-render to update avatar and name everywhere
+    renderAdminPositions();
+    return false;
+};
+
+// Delete candidate
+window.deleteCandidate = async function(candidateId) {
+    if (!confirm('Are you sure you want to delete this candidate?')) return;
+    let res = await fetch(`http://localhost:5000/api/candidates/${candidateId}`, { method: 'DELETE' });
+    if (res.ok) {
+        showToast('Candidate deleted!');
+        renderAdminPositions();
+    } else {
+        showToast('Failed to delete candidate', 'error');
+    }
+};
+
+// Show add candidate form
+window.showAddCandidateForm = function(positionId) {
+    document.getElementById(`add-candidate-form-${positionId}`).style.display = 'flex';
+};
+window.cancelAddCandidate = function(positionId) {
+    document.getElementById(`add-candidate-form-${positionId}`).style.display = 'none';
+};
+
+// Add candidate (image optional)
+window.addCandidate = async function(positionId) {
+    event.preventDefault();
+    const name = document.getElementById(`add-candidate-name-${positionId}`).value;
+    const imageInput = document.getElementById(`add-candidate-image-${positionId}`);
+    // Create candidate (without image first)
+    let res = await fetch('http://localhost:5000/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, position_id: positionId })
+    });
+    if (!res.ok) { showToast('Failed to add candidate', 'error'); return false; }
+    let { candidate_id } = await res.json();
+    // If image selected, upload it
+    if (imageInput.files && imageInput.files[0]) {
+        const formData = new FormData();
+        formData.append('image', imageInput.files[0]);
+        let imgRes = await fetch(`http://localhost:5000/api/candidates/${candidate_id}/image`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!imgRes.ok) { showToast('Image upload failed', 'error'); return false; }
+    }
+    showToast('Candidate added!');
+    renderAdminPositions();
+    return false;
+};
+
+// Render results from backend
+async function renderAdminResults() {
     const resultsList = document.getElementById('admin-results-list');
-    // Tally votes from users
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (positions.length === 0) {
-        resultsList.innerHTML = '<p>No positions found.</p>';
+    const res = await fetch('http://localhost:5000/api/results');
+    const data = await res.json();
+    const results = data.results || [];
+    if (results.length === 0) {
+        resultsList.innerHTML = '<p>No results found.</p>';
         return;
     }
-    let voteCounts = {};
-    positions.forEach(pos => {
-        voteCounts[pos.id] = {};
-        pos.candidates.forEach(candidate => {
-            voteCounts[pos.id][candidate.name] = 0;
-        });
+    // Group by position
+    const grouped = {};
+    results.forEach(r => {
+        if (!grouped[r.position_id]) grouped[r.position_id] = { name: r.position_name, candidates: [] };
+        grouped[r.position_id].candidates.push({ name: r.candidate_name, votes: r.votes });
     });
-    users.forEach(user => {
-        if (user.hasVoted && user.votes) {
-            Object.entries(user.votes).forEach(([posId, candidate]) => {
-                if (voteCounts[posId] && voteCounts[posId][candidate] !== undefined) {
-                    voteCounts[posId][candidate]++;
-                }
-            });
-        }
-    });
-    resultsList.innerHTML = positions.map(pos => {
-        let maxVotes = 0;
-        let winner = '';
-        pos.candidates.forEach(candidate => {
-            const count = voteCounts[pos.id][candidate.name];
-            if (count > maxVotes) {
-                maxVotes = count;
-                winner = candidate.name;
-            }
-        });
+    resultsList.innerHTML = Object.values(grouped).map(pos => {
+        const leader = pos.candidates.reduce((max, c) => c.votes > max.votes ? c : max, { votes: -1 });
         return `
             <div style='margin-bottom:1.5rem;'>
-                <strong>${pos.name}</strong> (${pos.category})<br>
+                <strong>${pos.name}</strong><br>
                 <ul>
-                    ${pos.candidates.map(c => `<li>${c.name}: ${voteCounts[pos.id][c.name]} votes</li>`).join('')}
+                    ${pos.candidates.map(c => `<li>${c.name}: ${c.votes} votes</li>`).join('')}
                 </ul>
-                <em>Current Leader: ${winner || 'No votes yet'}</em>
+                <em>Current Leader: ${leader.name || 'No votes yet'}</em>
             </div>
         `;
     }).join('');
@@ -212,7 +332,7 @@ document.getElementById('admin-add-user-form').addEventListener('submit', async 
     const messageDiv = document.getElementById('admin-add-user-message');
     messageDiv.textContent = '';
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/users', {
+        const response = await fetch('http://localhost:5000/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
