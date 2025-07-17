@@ -42,20 +42,12 @@ def get_db_with_database():
     return mysql.connector.connect(**config_with_db)
 
 def initialize_db():
-    print('--- initialize_db: Starting database initialization ---')
+    print('--- initialize_db: Starting table initialization ---')
     try:
-        # First, connect without database to create it if it doesn't exist
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("CREATE DATABASE IF NOT EXISTS voting_system")
-        db.commit()
-        cursor.close()
-        db.close()
-        print('Database voting_system created or already exists.')
-        
-        # Now connect with the database and create tables
+        # Connect directly to the specified existing database
         db = get_db_with_database()
         cursor = db.cursor()
+
         schema = """
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,6 +80,7 @@ def initialize_db():
             UNIQUE KEY unique_vote (user_id, position_id)
         );
         """
+
         for statement in schema.split(';'):
             if statement.strip():
                 cursor.execute(statement)
@@ -98,6 +91,7 @@ def initialize_db():
     except Exception as e:
         print('Error in initialize_db:', e)
     print('--- initialize_db: Finished ---')
+
 
 def populate_sample_data():
     print('--- populate_sample_data: Starting ---')
