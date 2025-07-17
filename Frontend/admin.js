@@ -16,7 +16,7 @@ let candidates = [];
 
 async function fetchPositionsAndCandidates() {
     // Fetch positions (with candidates included)
-    const res = await fetch('https://voting-system-backend-cewd.onrender.com/api/positions');
+    const res = await fetch('https://voting-system-backend-xdpf.onrender.com/api/positions');
     const data = await res.json();
     positions = data.positions || [];
     // Flatten all candidates for easy lookup
@@ -71,7 +71,7 @@ async function renderAdminUsers() {
     const usersList = document.getElementById('admin-users-list');
     usersList.innerHTML = '<p>Loading...</p>';
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/users');
+        const response = await fetch('https://voting-system-backend-xdpf.onrender.com/api/users');
         const data = await response.json();
         const users = data.users || [];
         if (users.length === 0) {
@@ -91,7 +91,7 @@ async function renderAdminUsers() {
 window.deleteUser = async function(userId) {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-        const response = await fetch(`https://voting-system-backend-cewd.onrender.com/api/users/${userId}`, {
+        const response = await fetch(`https://voting-system-backend-xdpf.onrender.com/api/users/${userId}`, {
             method: 'DELETE'
         });
         const data = await response.json();
@@ -192,7 +192,7 @@ window.changeCandidateImage = async function(candidateId) {
     if (input.files && input.files[0]) {
         const formData = new FormData();
         formData.append('image', input.files[0]);
-        let imgRes = await fetch(`https://voting-system-backend-cewd.onrender.com/api/candidates/${candidateId}/image`, {
+        let imgRes = await fetch(`https://voting-system-backend-xdpf.onrender.com/api/candidates/${candidateId}/image`, {
             method: 'POST',
             body: formData
         });
@@ -219,7 +219,7 @@ window.saveCandidateEdit = async function(candidateId) {
     const name = document.getElementById(`edit-candidate-name-${candidateId}`).value;
     const position_id = document.getElementById(`edit-candidate-position-${candidateId}`).value;
     // Update name and position
-    let res = await fetch(`https://voting-system-backend-cewd.onrender.com/api/candidates/${candidateId}`, {
+    let res = await fetch(`https://voting-system-backend-xdpf.onrender.com/api/candidates/${candidateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, position_id })
@@ -234,7 +234,7 @@ window.saveCandidateEdit = async function(candidateId) {
 // Delete candidate
 window.deleteCandidate = async function(candidateId) {
     if (!confirm('Are you sure you want to delete this candidate?')) return;
-    let res = await fetch(`https://voting-system-backend-cewd.onrender.com/api/candidates/${candidateId}`, { method: 'DELETE' });
+    let res = await fetch(`https://voting-system-backend-xdpf.onrender.com/api/candidates/${candidateId}`, { method: 'DELETE' });
     if (res.ok) {
         showToast('Candidate deleted!');
         renderAdminPositions();
@@ -257,7 +257,7 @@ window.addCandidate = async function(positionId) {
     const name = document.getElementById(`add-candidate-name-${positionId}`).value;
     const imageInput = document.getElementById(`add-candidate-image-${positionId}`);
     // Create candidate (without image first)
-    let res = await fetch('https://voting-system-backend-cewd.onrender.com/api/candidates', {
+    let res = await fetch('https://voting-system-backend-xdpf.onrender.com/api/candidates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, position_id: positionId })
@@ -268,7 +268,7 @@ window.addCandidate = async function(positionId) {
     if (imageInput.files && imageInput.files[0]) {
         const formData = new FormData();
         formData.append('image', imageInput.files[0]);
-        let imgRes = await fetch(`https://voting-system-backend-cewd.onrender.com/candidates/${candidate_id}/image`, {
+        let imgRes = await fetch(`https://voting-system-backend-xdpf.onrender.com/candidates/${candidate_id}/image`, {
             method: 'POST',
             body: formData
         });
@@ -282,7 +282,7 @@ window.addCandidate = async function(positionId) {
 // Render results from backend
 async function renderAdminResults() {
     const resultsList = document.getElementById('admin-results-list');
-    const res = await fetch('https://voting-system-backend-cewd.onrender.com/api/results');
+    const res = await fetch('https://voting-system-backend-xdpf.onrender.com/api/results');
     const data = await res.json();
     const results = data.results || [];
     if (results.length === 0) {
@@ -332,7 +332,7 @@ document.getElementById('admin-add-user-form').addEventListener('submit', async 
     const messageDiv = document.getElementById('admin-add-user-message');
     messageDiv.textContent = '';
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/users', {
+        const response = await fetch('https://voting-system-backend-xdpf.onrender.com/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
