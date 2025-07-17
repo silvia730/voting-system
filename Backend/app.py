@@ -429,4 +429,5 @@ def delete_candidate(candidate_id):
 if __name__ == '__main__':
     initialize_db()
     populate_sample_data()
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render sets PORT env var
+    app.run(debug=False, host='0.0.0.0', port=port)
