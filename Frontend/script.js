@@ -4,7 +4,7 @@ let positions = [];
 
 // Fetch positions and categories from backend
 async function fetchPositionsAndCategories() {
-    const res = await fetch('https://voting-system-backend-cewd.onrender.com/api/positions');
+    const res = await fetch('https://voting-system-backend-xdpf.onrender.com/api/positions');
     const data = await res.json();
     positions = data.positions || [];
     // Extract unique categories from positions
@@ -57,7 +57,7 @@ loginForm.addEventListener('submit', async function(e) {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/login', {
+        const response = await fetch('https://voting-system-backend-xdpf.onrender.com/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -162,7 +162,7 @@ votingForm.addEventListener('submit', async function(e) {
         return;
     }
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/vote', {
+        const response = await fetch('https://voting-system-backend-xdpf.onrender.com/api/vote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: currentUser.id, votes: votesById })
@@ -186,7 +186,7 @@ votingForm.addEventListener('submit', async function(e) {
 // Refactored: Show results by fetching from backend
 async function showResultsPage() {
     try {
-        const response = await fetch('https://voting-system-backend-cewd.onrender.com/api/results');
+        const response = await fetch('https://voting-system-backend-xdpf.onrender.com/api/results');
         const data = await response.json();
         if (!Array.isArray(data)) {
             resultsContainer.innerHTML = '<em>No results available.</em>';
